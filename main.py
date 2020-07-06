@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import torch.nn as nn
 from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
@@ -8,22 +10,25 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import training
 from log import create_logger
-import os
 import numpy as np
 import shutil
 import matplotlib.pyplot as plt
+from helpers import *
 
+# choose gpu
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
-model_dir = r'/home/zhuminqin/Code/ConceptProcess/saved_models/001'
+model_dir = r'/home/zhuminqin/Code/ConceptsProcess/saved_models/001'
+mkdir(model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), __file__), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'my_model.py'), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'training.py'), dst=model_dir)
 
 # log
-log, log_close = create_logger(log_filename=os.path.join(model_dir, 'train.log'))
+log, log_close = create_logger(log_filename=os.path.join(model_dir, 'test.log'))
 # load data
-test_dir = r''
-test_batch_size = 32
+test_dir = r'/home/zhuminqin/Data/dog_demo/dog_960'
+test_batch_size = 16
 test_datasets = datasets.ImageFolder(
     test_dir,
     transforms.ToTensor()
@@ -36,7 +41,7 @@ test_loader = torch.utils.data.DataLoader(
 # load model
 net = models.vgg11_bn(pretrained=False, progress=True)
 print(net)
-pretrained_dict = torch.load('/Users/zmin/PycharmProjects/ImageProcess/pretrained_models/vgg11_bn-6002323d.pth')
+pretrained_dict = torch.load('/home/zhuminqin/Code/ConceptsProcess/pretrained_models/vgg11_bn-6002323d.pth')
 model_dict = net.state_dict()
 print(len(pretrained_dict))
 pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
@@ -46,20 +51,23 @@ net = net.cuda()
 net_multi = nn.DataParallel(net)
 
 # extract feature maps
-net.eval()
-fts = training.train_or_test(net, test_loader)
+net_multi.eval()
+fts = training.train_or_test(net_multi, test_loader)
 np.save(os.path.join(model_dir, 'fts.npy'), fts)
 
 # fts clustering
-# 展平fts
-fts = fts.reshape((fts.shape[0], -1))
+# fts flatten
+print(f'fts.shape :{fts.shape}')
+fts = np.ndarray(fts).reshape((fts.shape[0], -1))
+print(f'fts.shape :{fts.shape}')
 
-# 降维fts，准备聚类
+# Dimensionality reduction
 ts = TSNE(n_components=2)
 new_ft = ts.fit_transform(fts)
-print(f'new_ft.shape: {new_ft.shape}')
+print(type(new_ft))
+print(f'new_ft.shape: {new_ft}')
 
-# 聚类
+# clustering
 km = KMeans(n_clusters=10)
 # np.save(dest_path, imgs)
 km.fit(new_ft)

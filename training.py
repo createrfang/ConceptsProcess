@@ -1,6 +1,7 @@
 import time
 
 import torch
+import numpy as np
 
 
 def train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l1_mask=True,
@@ -20,18 +21,22 @@ def train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l1
     # separation cost is meaningful only for class_specific
     total_separation_cost = 0
     total_avg_separation_cost = 0
-    outs = []
+    outs = None
 
     for i, (image, label) in enumerate(dataloader):
         input = image.cuda()
-
+        print(f'input.shape : {input.shape}')
         # torch.enable_grad() has no effect outside of no_grad()
         grad_req = torch.enable_grad() if is_train else torch.no_grad()
         with grad_req:
             # nn.Module has implemented __call__() function
             # so no need to call .forward
             output = model(input)
-            outs.append(output)
+            output = output.cpu().detach().numpy()
+            if outs is None:
+                outs = output
+            else:
+                outs = np.concatenate((outs, output), axis=0)
 
             n_batches += 1
 

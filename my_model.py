@@ -9,7 +9,6 @@ class VGG(nn.Module):
     def __init__(self, features, num_classes=2, init_weights=True):
         super(VGG, self).__init__()
         self.features = features
-        self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
         # self.classifier = nn.Sequential(
         #     nn.Linear(512 * 7 * 7, 4096),
         #     nn.ReLU(True),
